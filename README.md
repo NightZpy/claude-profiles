@@ -80,4 +80,4 @@ Claude Desktop app you already have installed.
 
 ## License
 
-Public domain ([Unlicense](LICENSE)).
+[MIT](LICENSE).
