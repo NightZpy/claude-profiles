@@ -233,43 +233,61 @@ func tileColor(_ name: String) -> Color {
 struct ProfileRow: View {
     let profile: Profile
     let action: () -> Void
+    var onDelete: (() -> Void)?
     @State private var hover = false
+    @State private var trashHover = false
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 11) {
-                Text(String(profile.name.prefix(1)).uppercased())
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(width: 32, height: 32)
-                    .background(tileColor(profile.name).gradient, in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(alignment: .bottomTrailing) {
-                        if profile.pid != nil {
-                            Circle().fill(.green)
-                                .frame(width: 9, height: 9)
-                                .overlay(Circle().stroke(.background, lineWidth: 2))
-                                .offset(x: 2, y: 2)
+        HStack(spacing: 4) {
+            Button(action: action) {
+                HStack(spacing: 11) {
+                    Text(String(profile.name.prefix(1)).uppercased())
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(tileColor(profile.name).gradient, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(alignment: .bottomTrailing) {
+                            if profile.pid != nil {
+                                Circle().fill(.green)
+                                    .frame(width: 9, height: 9)
+                                    .overlay(Circle().stroke(.background, lineWidth: 2))
+                                    .offset(x: 2, y: 2)
+                            }
                         }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(profile.name).font(.system(size: 13, weight: .semibold))
+                        Text(shortPath(profile.configDir))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
                     }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(profile.name).font(.system(size: 13, weight: .semibold))
-                    Text(shortPath(profile.configDir))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(profile.pid != nil ? "Go to" : "Open")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(hover ? .primary : .secondary)
                 }
-                Spacer()
-                Text(profile.pid != nil ? "Go to" : "Open")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(hover ? .primary : .secondary)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 8).padding(.vertical, 6)
-            .background(hover ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear),
-                        in: RoundedRectangle(cornerRadius: 8))
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .help(profile.pid != nil ? "Go to the \(profile.name) window" : "Open \(profile.name)")
+
+            // Delete button, shown on hover. Main has none but keeps the space so rows line up.
+            Button { onDelete?() } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 11))
+                    .foregroundStyle(trashHover ? Color.red : Color.secondary)
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { trashHover = $0 }
+            .opacity(hover && onDelete != nil ? 1 : 0)
+            .disabled(onDelete == nil)
+            .help("Delete \(profile.name)")
         }
-        .buttonStyle(.plain)
+        .padding(.leading, 8).padding(.trailing, 4).padding(.vertical, 6)
+        .background(hover ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear),
+                    in: RoundedRectangle(cornerRadius: 8))
         .onHover { hover = $0 }
-        .help(profile.pid != nil ? "Go to the \(profile.name) window" : "Open \(profile.name)")
     }
 }
 
@@ -334,7 +352,8 @@ struct PanelView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 1) {
                 ForEach(store.profiles) { p in
-                    ProfileRow(profile: p) { store.open(p) }
+                    ProfileRow(profile: p, action: { store.open(p) },
+                               onDelete: p.dataDir == nil ? nil : { store.confirmDelete(p) })
                         .contextMenu {
                             Button(p.pid != nil ? "Go to window" : "Open") { store.open(p) }
                             Button("Show folder in Finder") { store.reveal(p) }

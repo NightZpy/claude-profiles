@@ -11,7 +11,7 @@ From the menu bar icon you can:
 
 - open a profile, or jump to its window if it is already running
 - create a new profile
-- reveal a profile's data folder in Finder, or delete the profile (right click)
+- reveal a profile's data folder in Finder, or delete the profile (right click, or the trash icon on hover)
 - start the app at login
 
 ## Install
