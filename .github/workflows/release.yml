@@ -1,0 +1,26 @@
+name: Release
+
+# Pushing a tag like v1.2.0 builds the app and publishes it as a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: ./run.sh --build-only
+      - name: Zip
+        run: ditto -c -k --keepParent "build/Claude Profiles.app" "Claude-Profiles-${GITHUB_REF_NAME}.zip"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "Claude-Profiles-${GITHUB_REF_NAME}.zip" \
+            --title "Claude Profiles $GITHUB_REF_NAME" \
+            --notes "Download the zip, unzip it and move **Claude Profiles.app** to Applications. The app is not signed by Apple, so see the README for how to open it the first time."

@@ -18,8 +18,31 @@ From the menu bar icon you can:
 
 ## Install
 
-Requirements: macOS 14 or later, [Claude Desktop](https://claude.ai/download) in
-`/Applications`, and the Xcode command line tools (`xcode-select --install`).
+Requirements: macOS 14 or later and [Claude Desktop](https://claude.ai/download) in
+`/Applications`. The app runs on Apple silicon and Intel Macs.
+
+### Download
+
+1. Download the latest `Claude-Profiles-<version>.zip` from
+   [Releases](https://github.com/NightZpy/claude-profiles/releases/latest).
+2. Unzip it and move **Claude Profiles.app** to your Applications folder.
+3. Open it. Its icon appears in the menu bar.
+
+> [!IMPORTANT]
+> The app is not signed or notarized by Apple, so the first time you open it macOS says it
+> cannot verify the developer. To open it anyway, right click the app and choose **Open**,
+> then **Open** again. Or remove the quarantine flag once from Terminal:
+>
+> ```sh
+> xattr -d com.apple.quarantine "/Applications/Claude Profiles.app"
+> ```
+>
+> After that it opens normally. If you prefer not to run an unsigned download, build it
+> from source instead.
+
+### Build from source
+
+Needs the Xcode command line tools (`xcode-select --install`).
 
 ```sh
 git clone https://github.com/NightZpy/claude-profiles.git
@@ -28,7 +51,7 @@ cd claude-profiles
 ```
 
 `run.sh` compiles the app, installs it in `~/Applications/Claude Profiles.app` and opens
-it. Look for its icon in the menu bar.
+it. An app you build yourself opens without the warning above.
 
 ## Signing in to a new profile
 
@@ -69,6 +92,10 @@ Notes:
 
 To remove a profile, right click it and choose **Delete profile…**. It quits that window
 and moves the profile folder to the Trash, and optionally its Claude Code folder too.
+
+## Releasing
+
+Push a tag such as `v1.1.0`. The Release workflow builds the app and publishes the zip.
 
 ## Icon
 
