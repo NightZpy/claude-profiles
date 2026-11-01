@@ -67,6 +67,11 @@ Notes:
 
 To remove a profile, quit it and delete its `Claude-<Name>` folder.
 
+## Icon
+
+The icon source is [`assets/icon.svg`](assets/icon.svg). `assets/AppIcon.icns` is the
+macOS build of it.
+
 ## Disclaimer
 
 Unofficial project, not affiliated with or endorsed by Anthropic. It only launches the
