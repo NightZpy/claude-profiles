@@ -121,6 +121,63 @@ final class Store: ObservableObject {
         return nil
     }
 
+    // Asks for confirmation, quits the profile if it is open and moves its folders to the Trash.
+    func confirmDelete(_ profile: Profile) {
+        guard let dataDir = profile.dataDir else { return }
+        let configShared = profile.configDir == home + "/.claude"
+            || profiles.contains { $0.id != profile.id && $0.configDir == profile.configDir }
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Delete the \(profile.name) profile?"
+        alert.informativeText = """
+            Its Claude window loses the sign-in, settings and local data saved in \
+            \(shortPath(dataDir.path)). \(profile.pid != nil ? "The open window will be closed. " : "")\
+            Your chats stay in your Claude account.
+
+            Everything is moved to the Trash, so you can still recover it from there.
+            """
+        let checkbox = NSButton(checkboxWithTitle: "Also delete its Claude Code folder (\(shortPath(profile.configDir)))",
+                                target: nil, action: nil)
+        checkbox.toolTip = "Settings, skills, plugins and Claude Code session history for this profile"
+        if configShared {
+            checkbox.state = .off
+            checkbox.isEnabled = false
+            checkbox.title = "Its Claude Code folder is shared with another profile and is kept"
+        }
+        alert.accessoryView = checkbox
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.buttons[0].hasDestructiveAction = true
+        NSApp.activate()
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        if let pid = profile.pid, let app = NSRunningApplication(processIdentifier: pid) {
+            app.terminate()
+            let deadline = Date().addingTimeInterval(15)
+            while !app.isTerminated && Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.2)) }
+            guard app.isTerminated else {
+                showError("\(profile.name) is still open. Quit it and try again.")
+                return
+            }
+        }
+        do {
+            try FileManager.default.trashItem(at: dataDir, resultingItemURL: nil)
+            if checkbox.state == .on, FileManager.default.fileExists(atPath: profile.configDir) {
+                try FileManager.default.trashItem(at: URL(fileURLWithPath: profile.configDir), resultingItemURL: nil)
+            }
+        } catch {
+            showError("Could not delete it: \(error.localizedDescription)")
+        }
+        refresh()
+    }
+
+    private func showError(_ text: String) {
+        let alert = NSAlert()
+        alert.messageText = text
+        alert.runModal()
+    }
+
     func setLaunchAtLogin(_ on: Bool) {
         do {
             if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
@@ -281,6 +338,10 @@ struct PanelView: View {
                         .contextMenu {
                             Button(p.pid != nil ? "Go to window" : "Open") { store.open(p) }
                             Button("Show folder in Finder") { store.reveal(p) }
+                            if p.dataDir != nil {
+                                Divider()
+                                Button("Delete profile…", role: .destructive) { store.confirmDelete(p) }
+                            }
                         }
                 }
             }

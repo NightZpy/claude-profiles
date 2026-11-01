@@ -11,7 +11,7 @@ From the menu bar icon you can:
 
 - open a profile, or jump to its window if it is already running
 - create a new profile
-- reveal a profile's data folder in Finder (right click)
+- reveal a profile's data folder in Finder, or delete the profile (right click)
 - start the app at login
 
 ## Install
@@ -65,7 +65,8 @@ Notes:
 - Clicking Claude in the Dock always focuses an instance that is already running. To open
   Main while another profile is running, use the menu bar app.
 
-To remove a profile, quit it and delete its `Claude-<Name>` folder.
+To remove a profile, right click it and choose **Delete profile…**. It quits that window
+and moves the profile folder to the Trash, and optionally its Claude Code folder too.
 
 ## Icon
 
