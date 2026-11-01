@@ -261,11 +261,11 @@ func tileColor(_ name: String) -> Color {
     return tilePalette[h % tilePalette.count]
 }
 
-// "2.4 GB · 3 sessions, 1 working" for an open profile.
+// "2.4 GB · 3 sessions · 1 working" for an open profile.
 func usageLine(_ p: Profile) -> String {
     let mem = ByteCountFormatter.string(fromByteCount: Int64(p.memoryKB) * 1024, countStyle: .memory)
     let sessions = p.sessions == 1 ? "1 session" : "\(p.sessions) sessions"
-    return p.working > 0 ? "\(mem) · \(sessions), \(p.working) working" : "\(mem) · \(sessions)"
+    return p.working > 0 ? "\(mem) · \(sessions) · \(p.working) working" : "\(mem) · \(sessions)"
 }
 
 struct ProfileRow: View {
@@ -434,7 +434,7 @@ struct PanelView: View {
                 }
             }
         }
-        .frame(width: 300)
+        .frame(width: 350)
         .onAppear { store.refresh() }
     }
 }
