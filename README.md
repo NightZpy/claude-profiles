@@ -26,8 +26,7 @@ cd claude-profiles
 ```
 
 `run.sh` compiles the app, installs it in `~/Applications/Claude Profiles.app` and opens
-it. Look for its icon in the menu bar. The app icon is generated from the Claude Desktop
-icon already on your Mac, so no Claude artwork is shipped in this repo.
+it. Look for its icon in the menu bar.
 
 ## Signing in to a new profile
 

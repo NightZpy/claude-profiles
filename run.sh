@@ -11,9 +11,7 @@ APP="build/Claude Profiles.app"
 rm -rf build && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 swiftc -O -parse-as-library Sources/ClaudeProfiles.swift -o "$APP/Contents/MacOS/ClaudeProfiles"
-ICON="$CLAUDE_APP/Contents/Resources/$(defaults read "$CLAUDE_APP/Contents/Info.plist" CFBundleIconFile)"
-case "$ICON" in *.icns) ;; *) ICON="$ICON.icns" ;; esac
-swift scripts/make-icon.swift "$ICON" build/AppIcon.iconset
+swift scripts/make-icon.swift build/AppIcon.iconset
 iconutil -c icns build/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
 cp Info.plist "$APP/Contents/Info.plist"
 codesign --force --sign - "$APP"

@@ -1,46 +1,64 @@
-// Builds the app icon from the Claude Desktop icon installed on this Mac, with a
-// "profiles" badge on top. No Claude artwork is stored in this repo.
-// Usage: swift scripts/make-icon.swift <Claude.icns> <out.iconset>
+// Draws the app icon (an asterisk on the front card of a stack of profiles) into an .iconset.
+// Usage: swift scripts/make-icon.swift <out.iconset>
 import AppKit
 
-let source = NSImage(contentsOfFile: CommandLine.arguments[1])!
-let out = URL(fileURLWithPath: CommandLine.arguments[2])
+let out = URL(fileURLWithPath: CommandLine.arguments[1])
 try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
 
+func rgb(_ hex: UInt32, _ a: CGFloat = 1) -> CGColor {
+    CGColor(red: CGFloat(hex >> 16 & 0xff) / 255, green: CGFloat(hex >> 8 & 0xff) / 255,
+            blue: CGFloat(hex & 0xff) / 255, alpha: a)
+}
+
+func roundedRect(_ ctx: CGContext, _ r: CGRect, _ radius: CGFloat, _ color: CGColor, shadow: Bool = false) {
+    ctx.saveGState()
+    if shadow { ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 26, color: rgb(0, 0.3)) }
+    ctx.addPath(CGPath(roundedRect: r, cornerWidth: radius, cornerHeight: radius, transform: nil))
+    ctx.setFillColor(color)
+    ctx.fillPath()
+    ctx.restoreGState()
+}
+
 func draw(_ px: Int) -> Data {
-    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px,
-                               bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-                               colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-    let s = CGFloat(px)
-    source.draw(in: NSRect(x: 0, y: 0, width: s, height: s))
+    let ctx = CGContext(data: nil, width: px, height: px, bitsPerComponent: 8, bytesPerRow: 0,
+                        space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    ctx.scaleBy(x: CGFloat(px) / 1024, y: CGFloat(px) / 1024)
 
-    // Badge in the bottom-right corner, inside the icon's 824/1024 body.
-    let d = s * 0.34
-    let badge = NSRect(x: s * 0.905 - d, y: s * 0.095, width: d, height: d)
-    let shadow = NSShadow()
-    shadow.shadowBlurRadius = s * 0.02
-    shadow.shadowOffset = NSSize(width: 0, height: -s * 0.008)
-    shadow.shadowColor = NSColor.black.withAlphaComponent(0.35)
-    NSGraphicsContext.saveGraphicsState()
-    shadow.set()
-    NSColor.white.setFill()
-    NSBezierPath(ovalIn: badge).fill()
-    NSGraphicsContext.restoreGraphicsState()
-    NSColor(srgbRed: 0.16, green: 0.17, blue: 0.22, alpha: 1).setFill()
-    NSBezierPath(ovalIn: badge.insetBy(dx: d * 0.07, dy: d * 0.07)).fill()
+    // Squircle on Apple's 1024 grid (824 body, 100 inset).
+    let body = CGPath(roundedRect: CGRect(x: 100, y: 100, width: 824, height: 824),
+                      cornerWidth: 185, cornerHeight: 185, transform: nil)
+    ctx.saveGState()
+    ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 24, color: rgb(0, 0.3))
+    ctx.addPath(body); ctx.setFillColor(rgb(0x15171F)); ctx.fillPath()
+    ctx.restoreGState()
+    ctx.saveGState()
+    ctx.addPath(body); ctx.clip()
+    let bg = CGGradient(colorsSpace: nil, colors: [rgb(0x2A2D3E), rgb(0x15171F)] as CFArray,
+                        locations: [0, 1])!
+    ctx.drawLinearGradient(bg, start: CGPoint(x: 512, y: 924), end: CGPoint(x: 512, y: 100), options: [])
+    ctx.restoreGState()
 
-    let config = NSImage.SymbolConfiguration(pointSize: d * 0.42, weight: .semibold)
-        .applying(.init(paletteColors: [.white]))
-    if let sym = NSImage(systemSymbolName: "person.2.fill", accessibilityDescription: nil)?
-        .withSymbolConfiguration(config) {
-        let r = NSRect(x: badge.midX - sym.size.width / 2, y: badge.midY - sym.size.height / 2,
-                       width: sym.size.width, height: sym.size.height)
-        sym.draw(in: r)
+    // Stack of profile cards, back to front.
+    roundedRect(ctx, CGRect(x: 300, y: 380, width: 470, height: 440), 70, rgb(0xFFF1E3, 0.18), shadow: true)
+    roundedRect(ctx, CGRect(x: 270, y: 300, width: 470, height: 440), 70, rgb(0xFFF1E3, 0.35), shadow: true)
+    roundedRect(ctx, CGRect(x: 240, y: 200, width: 470, height: 440), 70, rgb(0x232636), shadow: true)
+
+    // Eight-ray asterisk on the front card, half warm and half cream.
+    ctx.saveGState()
+    ctx.translateBy(x: 475, y: 420)
+    for i in 0..<8 {
+        ctx.saveGState()
+        ctx.rotate(by: CGFloat(i) * .pi / 4)
+        roundedRect(ctx, CGRect(x: -23, y: 24, width: 46, height: 150), 23,
+                    rgb(i < 4 ? 0xF5A25D : 0xFFF1E3))
+        ctx.restoreGState()
     }
-    NSGraphicsContext.restoreGraphicsState()
-    return rep.representation(using: .png, properties: [:])!
+    ctx.setFillColor(rgb(0x232636))
+    ctx.fillEllipse(in: CGRect(x: -28.5, y: -28.5, width: 57, height: 57))
+    ctx.restoreGState()
+
+    return NSBitmapImageRep(cgImage: ctx.makeImage()!).representation(using: .png, properties: [:])!
 }
 
 for base in [16, 32, 128, 256, 512] {
