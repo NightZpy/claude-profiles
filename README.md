@@ -31,9 +31,18 @@ icon already on your Mac, so no Claude artwork is shipped in this repo.
 
 ## Signing in to a new profile
 
-Use **Continue with email** and type the code you receive. Google sign-in finishes
-through a `claude://` link, and macOS sends that link to the Claude window that started
-first, so it never reaches the new profile.
+When other profiles are already open, sign in like this:
+
+1. In the new profile's window choose **Continue with email**, not Google.
+2. When it asks how to sign in, pick the option to use a code.
+3. Open the link Anthropic emails you in your browser.
+4. If the browser offers to open the Claude app, decline it and choose to sign in with a
+   code instead. You land on a page that shows the code.
+5. Type that code into the new profile's window.
+
+Google sign-in and the "open Claude" button both finish through a `claude://` link, and
+macOS sends that link to the Claude window that started first, so it never reaches the
+new profile.
 
 ## How it works
 

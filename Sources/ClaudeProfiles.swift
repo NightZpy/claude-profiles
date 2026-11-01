@@ -205,10 +205,20 @@ struct NewProfileForm: View {
                 }
             TextField("Claude Code folder", text: $configDir)
                 .textFieldStyle(.roundedBorder)
-            Text("Sign in with \u{201C}Continue with email\u{201D} and the emailed code. Google sign-in ends up in the Main window.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("How to sign in while other profiles are open")
+                    .font(.system(size: 11, weight: .semibold))
+                Text("""
+                    1. Choose Continue with email, not Google.
+                    2. When asked, pick the sign-in code option.
+                    3. Open the link Anthropic emails you in the browser.
+                    4. If the browser offers to open Claude, decline and choose to sign in with a code.
+                    5. Type the code it shows into this profile's window.
+                    """)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
             if let error {
                 Text(error).font(.system(size: 11)).foregroundStyle(.red)
             }
