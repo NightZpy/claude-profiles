@@ -133,6 +133,38 @@ final class Store: ObservableObject {
 
 // MARK: - Views
 
+// Monochrome version of the app icon for the menu bar: an asterisk on the front card of a stack.
+let menuBarIcon: NSImage = {
+    let img = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+        NSColor.black.setStroke()
+        NSColor.black.setFill()
+        // Back cards: outline corners peeking above and to the right.
+        for offset in [CGFloat(4), 2] {
+            let back = NSBezierPath(roundedRect: NSRect(x: 1 + offset, y: 1 + offset, width: 12, height: 12),
+                                    xRadius: 3, yRadius: 3)
+            back.lineWidth = 1.2
+            back.stroke()
+        }
+        // Front card, filled, with the asterisk cut out of it.
+        let front = NSBezierPath(roundedRect: NSRect(x: 1, y: 1, width: 12, height: 12), xRadius: 3, yRadius: 3)
+        front.fill()
+        NSGraphicsContext.current?.compositingOperation = .clear
+        let star = NSBezierPath()
+        let c = NSPoint(x: 7, y: 7)
+        for i in 0..<8 {
+            let a = CGFloat(i) * .pi / 4
+            star.move(to: NSPoint(x: c.x + cos(a) * 1.3, y: c.y + sin(a) * 1.3))
+            star.line(to: NSPoint(x: c.x + cos(a) * 4, y: c.y + sin(a) * 4))
+        }
+        star.lineWidth = 1.3
+        star.lineCapStyle = .round
+        star.stroke()
+        return true
+    }
+    img.isTemplate = true
+    return img
+}()
+
 let tilePalette: [Color] = [.indigo, .teal, .pink, .green, .blue, .purple, .mint]
 
 func tileColor(_ name: String) -> Color {
@@ -296,7 +328,7 @@ struct ClaudeProfilesApp: App {
         MenuBarExtra {
             PanelView(store: store)
         } label: {
-            Image(systemName: "person.2.crop.square.stack")
+            Image(nsImage: menuBarIcon)
         }
         .menuBarExtraStyle(.window)
     }
