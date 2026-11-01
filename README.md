@@ -10,6 +10,8 @@ and Claude Code configuration, and they all stay open at the same time.
 From the menu bar icon you can:
 
 - open a profile, or jump to its window if it is already running
+- see how much memory each open profile uses and how many Claude Code sessions it has
+  running (and how many are working right now)
 - create a new profile
 - reveal a profile's data folder in Finder, or delete the profile (right click, or the trash icon on hover)
 - start the app at login

@@ -16,6 +16,9 @@ struct Profile: Identifiable, Equatable {
     let dataDir: URL?  // nil = Main
     let configDir: String
     var pid: pid_t?
+    var memoryKB = 0     // resident memory of the whole process tree
+    var sessions = 0     // running Claude Code sessions
+    var working = 0      // of those, sessions using CPU right now
     var id: String { name }
     var commandLine: String {
         dataDir.map { "\(claudeBin) --user-data-dir=\($0.path)" } ?? claudeBin
@@ -39,7 +42,13 @@ final class Store: ObservableObject {
     }
 
     func refresh() {
-        let running = runningCommandLines()
+        let procs = processTable()
+        var running: [String: pid_t] = [:]
+        var children: [pid_t: [Proc]] = [:]
+        for p in procs {
+            children[p.ppid, default: []].append(p)
+            if p.command.hasPrefix(claudeBin) { running[p.command] = p.pid }
+        }
         var list = [Profile(name: "Main", dataDir: nil, configDir: home + "/.claude")]
         let dirs = (try? FileManager.default.contentsOfDirectory(
             at: supportDir, includingPropertiesForKeys: nil)) ?? []
@@ -52,28 +61,50 @@ final class Store: ObservableObject {
                 dataDir: dir,
                 configDir: cfg.trimmingCharacters(in: .whitespacesAndNewlines)))
         }
-        for i in list.indices { list[i].pid = running[list[i].commandLine] }
+        for i in list.indices {
+            guard let pid = running[list[i].commandLine] else { continue }
+            list[i].pid = pid
+            var stack = children[pid] ?? []
+            list[i].memoryKB = procs.first { $0.pid == pid }?.rssKB ?? 0
+            while let p = stack.popLast() {
+                list[i].memoryKB += p.rssKB
+                if p.isCodeSession {
+                    list[i].sessions += 1
+                    if p.cpu >= 1 { list[i].working += 1 }
+                }
+                stack += children[p.pid] ?? []
+            }
+        }
         if list != profiles { profiles = list }
     }
 
-    // Exact command line -> pid for every running Claude Desktop main process.
-    private func runningCommandLines() -> [String: pid_t] {
+    struct Proc {
+        let pid: pid_t, ppid: pid_t, rssKB: Int, cpu: Double, command: String
+        // The Claude Code CLI that Desktop runs per session lives under <data dir>/claude-code/
+        // (e.g. .../claude-code/<version>/<hash>/claude.app/Contents/MacOS/claude). Its launcher
+        // wrapper (under /Applications/Claude.app) is not counted.
+        var isCodeSession: Bool {
+            !command.hasPrefix("/Applications/")
+                && command.range(of: #"/claude-code/[^ ]*/claude( |$)"#, options: .regularExpression) != nil
+        }
+    }
+
+    private func processTable() -> [Proc] {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/ps")
-        p.arguments = ["-axo", "pid=,command="]
+        p.arguments = ["-axo", "pid=,ppid=,rss=,%cpu=,command="]
         let pipe = Pipe()
         p.standardOutput = pipe
         try? p.run()
         let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         p.waitUntilExit()
-        var map: [String: pid_t] = [:]
-        for line in out.split(separator: "\n") {
-            let t = line.trimmingCharacters(in: .whitespaces)
-            guard let sp = t.firstIndex(of: " "), let pid = pid_t(t[..<sp]) else { continue }
-            let cmd = t[sp...].trimmingCharacters(in: .whitespaces)
-            if cmd.hasPrefix(claudeBin) { map[cmd] = pid }
+        return out.split(separator: "\n").compactMap { line in
+            let f = line.split(separator: " ", maxSplits: 4, omittingEmptySubsequences: true)
+            guard f.count == 5, let pid = pid_t(f[0]), let ppid = pid_t(f[1]),
+                  let rss = Int(f[2]), let cpu = Double(f[3]) else { return nil }
+            return Proc(pid: pid, ppid: ppid, rssKB: rss, cpu: cpu,
+                        command: f[4].trimmingCharacters(in: .whitespaces))
         }
-        return map
     }
 
     func open(_ profile: Profile) {
@@ -230,6 +261,13 @@ func tileColor(_ name: String) -> Color {
     return tilePalette[h % tilePalette.count]
 }
 
+// "2.4 GB · 3 sessions, 1 working" for an open profile.
+func usageLine(_ p: Profile) -> String {
+    let mem = ByteCountFormatter.string(fromByteCount: Int64(p.memoryKB) * 1024, countStyle: .memory)
+    let sessions = p.sessions == 1 ? "1 session" : "\(p.sessions) sessions"
+    return p.working > 0 ? "\(mem) · \(sessions), \(p.working) working" : "\(mem) · \(sessions)"
+}
+
 struct ProfileRow: View {
     let profile: Profile
     let action: () -> Void
@@ -256,9 +294,10 @@ struct ProfileRow: View {
                         }
                     VStack(alignment: .leading, spacing: 1) {
                         Text(profile.name).font(.system(size: 13, weight: .semibold))
-                        Text(shortPath(profile.configDir))
+                        Text(profile.pid != nil ? usageLine(profile) : shortPath(profile.configDir))
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
                     Spacer()
                     Text(profile.pid != nil ? "Go to" : "Open")
